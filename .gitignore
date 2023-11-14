@@ -16,7 +16,7 @@
 
 # User-specific files (MonoDevelop/Xamarin Studio)
 *.userprefs
-Properties/
+[Pp]roperties/
 
 # Mono auto generated files
 mono_crash.*

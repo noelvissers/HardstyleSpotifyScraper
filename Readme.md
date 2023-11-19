@@ -53,12 +53,9 @@ namespace SpotifyReleaseScavenger.TrackSources
 In the appsettings.json, add the Spotify playlist ID:
 ```json
 {
- ...
  "SpotifyPlaylistId": {
-   ...
    "NewPlaylist": "SPOTIFY_PLAYLIST_ID"
- },
- ...
+ }
 }
 ```
 

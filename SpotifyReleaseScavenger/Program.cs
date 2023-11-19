@@ -1,5 +1,6 @@
 ﻿using Microsoft.Extensions.Configuration;
 using SpotifyAPI.Web;
+using SpotifyAPI.Web.Http;
 using SpotifyReleaseScavenger.Interfaces;
 using SpotifyReleaseScavenger.Models;
 using SpotifyReleaseScavenger.TrackSources;
@@ -51,9 +52,9 @@ namespace SpotifyReleaseScavenger
       /*
       List<IScavenge> newPlaylistSources = new()
       {
-        new newPlaylist_Source1(),
-        new newPlaylist_Source2(),
-        new newPlaylist_Source3()
+          new newSource_Source1(),
+          new newSource_Source2(),
+          new newSource_Source3()
       };
       string newPlaylistId = configurationBuilder.GetSection("SpotifyPlaylistId:NewPlaylist").Value;
       PlaylistData newPlaylist = new(newPlaylistId, newPlaylistSources);
@@ -103,7 +104,6 @@ namespace SpotifyReleaseScavenger
       var clientSecret = configurationBuilder.GetSection("Spotify:ClientSecret").Value;
       var redirectUri = new Uri(configurationBuilder.GetSection("Spotify:RedirectUri").Value);
       var refreshToken = configurationBuilder.GetSection("Spotify:RefreshToken").Value;
-      //var playlistId = configurationBuilder.GetSection("Spotify:PlaylistId").Value;
 
       try
       {
@@ -122,7 +122,7 @@ namespace SpotifyReleaseScavenger
           redirectUri,
           clientId,
           LoginRequest.ResponseType.Code
-)
+        )
         {
           Scope = new[] { Scopes.UserReadPrivate, Scopes.PlaylistReadPrivate, Scopes.PlaylistModifyPrivate, Scopes.PlaylistModifyPublic } // Include necessary scopes
         };
@@ -131,14 +131,19 @@ namespace SpotifyReleaseScavenger
         Console.WriteLine($"[AUTH] Please navigate to {uri} and log in.");
         Console.Write("[AUTH] Enter the code from the redirect URI: ");
         var code = Console.ReadLine();
-        _ = await new OAuthClient().RequestToken(
+        var response = await new OAuthClient().RequestToken(
           new AuthorizationCodeTokenRequest(
             clientId,
             clientSecret,
             code,
             redirectUri
-          )
+        )
         );
+
+        spotify = new SpotifyClient(response.AccessToken);
+
+        Console.WriteLine($"[AUTH] Access Token: {response.AccessToken}");
+        Console.WriteLine($"[AUTH] Refresh Token: {response.RefreshToken}");
       }
     }
 
@@ -281,14 +286,31 @@ namespace SpotifyReleaseScavenger
       {
         var playlistTracks = await spotify.Playlists.GetItems(playlistId);
 
-        var tracksToRemove = playlistTracks.Items
-          .Where(item => item.AddedAt.HasValue && item.AddedAt.Value < dateThreshold)
-          .Select(item => (item.Track as FullTrack)?.TrackNumber - 1)
-          .ToList();
+        List<PlaylistRemoveItemsRequest.Item> tracksToRemove = new List<Item>();
+
+        var oldTracks = playlistTracks.Items
+            .Where(item => item.AddedAt.HasValue && item.AddedAt.Value < dateThreshold)
+            .Select(item => (item.Track as FullTrack)?.Uri)
+            .ToList();
+
+        foreach (var track in oldTracks)
+        {
+          tracksToRemove.Add(new Item { Uri = track });
+        }
 
         if (tracksToRemove.Any())
         {
-          await spotify.Playlists.RemoveItems(playlistId, new PlaylistRemoveItemsRequest { Positions = (IList<int>)tracksToRemove });
+          var playlist = await spotify.Playlists.Get(playlistId);
+          var snapshotId = playlist.SnapshotId;
+
+          await spotify.Playlists.RemoveItems(
+            playlistId,
+            new PlaylistRemoveItemsRequest
+            { 
+              Tracks = tracksToRemove,
+              SnapshotId = snapshotId 
+            }
+          );
           Console.WriteLine($"[SPOTIFY] Removed {tracksToRemove.Count} tracks from the playlist that were added > {dateAddedThreshold} days ago.");
         }
         else
@@ -330,8 +352,10 @@ namespace SpotifyReleaseScavenger
 
         if (followers >= thresholdFollowers && popularity >= thresholdPopularity)
         {
+          Console.WriteLine($"[SPOTIFY] Artist above threshold: F: {followers} [{thresholdFollowers}] P: {popularity} [{thresholdPopularity}] Artist: {fullArtist.Name}");
           return true;
         }
+        Console.WriteLine($"[SPOTIFY] Artist below threshold: F: {followers} [{thresholdFollowers}] P: {popularity} [{thresholdPopularity}] Artist: {fullArtist.Name}");
       }
       return false;
     }

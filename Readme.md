@@ -52,12 +52,14 @@ namespace SpotifyReleaseScavenger.TrackSources
 
 In the appsettings.json, add the Spotify playlist ID:
 ```json
+{
  ...
  "SpotifyPlaylistId": {
    ...
    "NewPlaylist": "SPOTIFY_PLAYLIST_ID"
  },
  ...
+}
 ```
 
 In the Run() method in the Program.cs file, add your new playlist like so:

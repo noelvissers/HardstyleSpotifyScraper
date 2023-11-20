@@ -49,8 +49,8 @@ namespace SpotifyReleaseScavenger.TrackSources
        * 
        * // Create track
        * TrackData track = new TrackData();
-       * track.Title = /* Scraped title */
-       * track.Artist = /* Scraped artist */
+       * track.Title = //Scraped title
+       * track.Artist = //Scraped artist
        * 
        * // Set hash
        * track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{track.Artist}{track.Title}")));

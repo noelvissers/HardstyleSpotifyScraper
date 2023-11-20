@@ -30,7 +30,7 @@ This program can be configured via the appsettings.json file. It is recommended 
 
 ## Adding your own sources
 
-To add your own source, create a new .cs file in the TrackSources folder with a class that returns a TrackData list. 
+To add your own source, create a new .cs file in the TrackSources folder with a class that returns a TrackData list. This list should contain tracks with a title, artist, and a hash (see example).
 
 Example:
 ```csharp
@@ -42,7 +42,22 @@ namespace SpotifyReleaseScavenger.TrackSources
     {
       List<TrackData> trackData = new List<TrackData>();
       
-      /* Your custom scrape code */
+      /* // Your custom scrape code:
+       *
+       * // Get track title and artist from source
+       * //...
+       * 
+       * // Create track
+       * TrackData track = new TrackData();
+       * track.Title = /* Scraped title */
+       * track.Artist = /* Scraped artist */
+       * 
+       * // Set hash
+       * track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{track.Artist}{track.Title}")));
+       * 
+       * // Add track to list
+       * trackData.Add(track);
+       */
       
       return trackData;
     }

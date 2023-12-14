@@ -42,10 +42,10 @@ namespace SpotifyReleaseScavenger
       // HardstyleReleaseRadar
       List<IScavenge> hardstyleReleaseRadarSources = new()
       {
-        //new HardstyleDotCom_Albums(),
+        new HardstyleDotCom_Albums(),
         //new HardstyleDotCom_Tracks(),
-        new ArGangDotNl_Albums(),
-        new ArGangDotNl_Tracks()
+        //new ArGangDotNl_Albums(),
+        //new ArGangDotNl_Tracks()
       };
       string hardstyleReleaseRadarId = configurationBuilder.GetSection("SpotifyPlaylistId:HardstyleReleaseRadar").Value;
       PlaylistData hardstyleReleaseRadar = new(hardstyleReleaseRadarId, hardstyleReleaseRadarSources);

@@ -44,6 +44,10 @@ namespace SpotifyReleaseScavenger.TrackSources
 
         // TODO: Check albums
 
+        // Make sure these tracks arent added twice: https://open.spotify.com/album/5i6jgMm2JAYNLSN6YgBHSF?si=yjjOyMpSStqARs-t5zX3TQ
+        // Only normal track is fine.
+        // This should be in tracks to add, but noted here
+
         albumsChecked++;
       }
 

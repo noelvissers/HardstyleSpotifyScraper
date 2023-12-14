@@ -26,11 +26,10 @@ namespace SpotifyReleaseScavenger.TrackSources
         .AddUserSecrets<Program>()
         .Build();
 
-      int trackPagesToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleReleaseRadarSettings:TrackPagesToCheck").Value);
+      int trackPagesToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleDotComSettings:TrackPagesToCheck").Value);
 
       for (int i = 1; i <= trackPagesToCheck; i++)
       {
-        Thread.Sleep(1000);
         HtmlDocument doc = web.Load(@"https://music.hardstyle.com/hardstyle-releases/tracks/page/" + i.ToString());
         IEnumerable<HtmlNode> nodeTrackTracks = doc.DocumentNode
           .Descendants("td")

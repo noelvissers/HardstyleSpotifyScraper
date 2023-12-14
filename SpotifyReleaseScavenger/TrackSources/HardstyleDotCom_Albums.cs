@@ -32,7 +32,7 @@ namespace SpotifyReleaseScavenger.TrackSources
         .AddUserSecrets<Program>()
         .Build();
 
-      int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleReleaseRadarSettings:AlbumsToCheck").Value);
+      int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleDotComSettings:AlbumsToCheck").Value);
       int albumsChecked = 0;
 
       foreach (var node in nodeAlbums)
@@ -45,9 +45,7 @@ namespace SpotifyReleaseScavenger.TrackSources
 
         string albumData = GetStringBetween(node.InnerHtml, "href=\"", "\">");
 
-        Thread.Sleep(1000);
         HtmlDocument albumDetail = web.Load(albumData);
-
         IEnumerable<HtmlNode> nodeAlbum = albumDetail.DocumentNode
           .Descendants("td")
           .Where(n => n.HasClass("text-1"));
@@ -101,7 +99,7 @@ namespace SpotifyReleaseScavenger.TrackSources
     public string GetStringBetween(string text, string firstString, string lastString)
     {
       int pos1 = text.IndexOf(firstString) + firstString.Length;
-      int pos2 = text.IndexOf(lastString);
+      int pos2 = text.IndexOf(lastString, pos1);
 
       return text.Substring(pos1, pos2 - pos1);
     }

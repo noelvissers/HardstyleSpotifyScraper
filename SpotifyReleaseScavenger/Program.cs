@@ -42,8 +42,10 @@ namespace SpotifyReleaseScavenger
       // HardstyleReleaseRadar
       List<IScavenge> hardstyleReleaseRadarSources = new()
       {
-        new HardstyleDotCom_Albums(),
-        new HardstyleDotCom_Tracks()
+        //new HardstyleDotCom_Albums(),
+        //new HardstyleDotCom_Tracks(),
+        new ArGangDotNl_Albums(),
+        new ArGangDotNl_Tracks()
       };
       string hardstyleReleaseRadarId = configurationBuilder.GetSection("SpotifyPlaylistId:HardstyleReleaseRadar").Value;
       PlaylistData hardstyleReleaseRadar = new(hardstyleReleaseRadarId, hardstyleReleaseRadarSources);
@@ -179,67 +181,133 @@ namespace SpotifyReleaseScavenger
 
         List<string> artists = GetArtistList(track.Artist);
         var searchQuery = $"{track.Title} {artists.First()}";
-        var searchRequest = new SearchRequest(SearchRequest.Types.Track, searchQuery);
+        SearchRequest searchRequest;
 
         Thread.Sleep(100);
-
-        try
+        if (track.IsAlbum)
         {
-          var searchResult = await spotify.Search.Item(searchRequest);
-
-          if (searchResult.Tracks.Items != null)
+          searchRequest = new SearchRequest(SearchRequest.Types.Album, searchQuery);
+          try
           {
-            TrackData spotifyTrack = track;
+            // Get album tracks
+            var searchResult = await spotify.Search.Item(searchRequest);
 
-            foreach (var item in searchResult.Tracks.Items)
+            if (searchResult.Albums.Items != null)
             {
+              var item = searchResult.Albums.Items.First();
               if (chechForReleaseDate)
               {
-                // Add first track with todays release date
-                DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
+                DateTime.TryParse(item.ReleaseDate, out DateTime releaseDate);
                 if (currentDate.Year == releaseDate.Year && currentDate.Month == releaseDate.Month && currentDate.Day == releaseDate.Day)
                 {
                   if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                   {
+                    // Add album tracks to list
+                    var fullAlbum = await spotify.Albums.Get(item.Id);
+                    foreach (var albumTrack in fullAlbum.Tracks.Items)
+                    {
+                      TrackData spotifyTrack = new TrackData();
+
+                      spotifyTrack.SpotifyArtists = albumTrack.Artists;
+                      spotifyTrack.Title = albumTrack.Name;
+                      spotifyTrack.Uri = albumTrack.Uri;
+                      spotifyTrack.ReleaseDate = releaseDate;
+                      spotifyTrackList.Add(spotifyTrack);
+                      Console.WriteLine($"[SPOTIFY] Found track: [{spotifyTrack.Uri}] {spotifyTrack.SpotifyArtists.First().Name} - {spotifyTrack.Title}");
+                    }
+                  }
+                }
+              }
+              else
+              {
+                // Add album tracks to list
+                var fullAlbum = await spotify.Albums.Get(item.Id);
+                foreach (var albumTrack in fullAlbum.Tracks.Items)
+                {
+                  if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
+                  {
+                    TrackData spotifyTrack = new TrackData();
+
+                    spotifyTrack.SpotifyArtists = albumTrack.Artists;
+                    spotifyTrack.Title = albumTrack.Name;
+                    spotifyTrack.Uri = albumTrack.Uri;
+                    DateTime.TryParse(item.ReleaseDate, out DateTime releaseDate);
+                    spotifyTrack.ReleaseDate = releaseDate;
+                    spotifyTrackList.Add(spotifyTrack);
+                    Console.WriteLine($"[SPOTIFY] Found track: [{spotifyTrack.Uri}] {spotifyTrack.SpotifyArtists.First().Name} - {spotifyTrack.Title}");
+                  }
+                }
+              }
+            }
+          }
+          catch (Exception ex)
+          {
+            Console.WriteLine($"Error: {ex.Message}");
+          }
+        }
+        else
+        {
+          searchRequest = new SearchRequest(SearchRequest.Types.Track, searchQuery);
+          try
+          {
+            // Get track
+            var searchResult = await spotify.Search.Item(searchRequest);
+
+            if (searchResult.Tracks.Items != null)
+            {
+              TrackData spotifyTrack = track;
+
+              foreach (var item in searchResult.Tracks.Items)
+              {
+                if (chechForReleaseDate)
+                {
+                  // Add first track with todays release date
+                  DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
+                  if (currentDate.Year == releaseDate.Year && currentDate.Month == releaseDate.Month && currentDate.Day == releaseDate.Day)
+                  {
+                    if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
+                    {
+                      spotifyTrack.SpotifyArtists = item.Artists;
+                      spotifyTrack.Uri = item.Uri;
+                      spotifyTrack.ReleaseDate = releaseDate;
+                      spotifyTrackList.Add(spotifyTrack);
+                    }
+                    break;
+                  }
+                  else
+                  {
+                    continue;
+                  }
+                }
+                else
+                {
+                  // Add first track
+                  if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
+                  {
                     spotifyTrack.SpotifyArtists = item.Artists;
                     spotifyTrack.Uri = item.Uri;
+                    DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
                     spotifyTrack.ReleaseDate = releaseDate;
                     spotifyTrackList.Add(spotifyTrack);
                   }
                   break;
                 }
-                else
-                {
-                  continue;
-                }
               }
-              else
-              {
-                // Add first track
-                if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
-                {
-                  spotifyTrack.SpotifyArtists = item.Artists;
-                  spotifyTrack.Uri = item.Uri;
-                  DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
-                  spotifyTrack.ReleaseDate = releaseDate;
-                  spotifyTrackList.Add(spotifyTrack);
-                }
-                break;
-              }
-            }
 
-            if (spotifyTrack.Uri != null)
-            {
-              Console.WriteLine($"[SPOTIFY] Found track: [{spotifyTrack.Uri}] {spotifyTrack.SpotifyArtists.First().Name} - {spotifyTrack.Title}");
+              if (spotifyTrack.Uri != null)
+              {
+                Console.WriteLine($"[SPOTIFY] Found track: [{spotifyTrack.Uri}] {spotifyTrack.SpotifyArtists.First().Name} - {spotifyTrack.Title}");
+              }
             }
           }
-        }
-        catch (Exception ex)
-        {
-          Console.WriteLine($"Error: {ex.Message}");
+          catch (Exception ex)
+          {
+            Console.WriteLine($"Error: {ex.Message}");
+          }
         }
       }
 
+      spotifyTrackList = spotifyTrackList.DistinctBy(track => track.Uri).ToList();
       return spotifyTrackList;
     }
 
@@ -249,21 +317,25 @@ namespace SpotifyReleaseScavenger
       {
         var playlistTracks = await spotify.Playlists.GetItems(playlistId);
 
+        trackList.Reverse();
+        Thread.Sleep(1000);
+
         foreach (var track in trackList)
         {
           if (track.Uri != null && (!playlistTracks.Items.Any(item => (item.Track as FullTrack)?.Uri == track.Uri)))
           {
             //Add track to playlist
             await spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(new List<string> { track.Uri }));
-            Console.WriteLine($"[SPOTIFY] Added track '[{track.Uri}] {track.Artist} - {track.Title}' to playlist [{playlistId}]");
+            Console.WriteLine($"[SPOTIFY] Added track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' to playlist [{playlistId}]");
           }
           else
           {
             //Track is already in playlist
-            Console.WriteLine($"[SPOTIFY] Track '[{track.Uri}] {track.Artist} - {track.Title}' already in playlist [{playlistId}]");
+            Console.WriteLine($"[SPOTIFY] Track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' already in playlist [{playlistId}]");
           }
 
-          Thread.Sleep(100);
+          //Needed for better order in playlist
+          Thread.Sleep(500);
         }
       }
       catch (Exception ex)
@@ -306,9 +378,9 @@ namespace SpotifyReleaseScavenger
           await spotify.Playlists.RemoveItems(
             playlistId,
             new PlaylistRemoveItemsRequest
-            { 
+            {
               Tracks = tracksToRemove,
-              SnapshotId = snapshotId 
+              SnapshotId = snapshotId
             }
           );
           Console.WriteLine($"[SPOTIFY] Removed {tracksToRemove.Count} tracks from the playlist that were added > {dateAddedThreshold} days ago.");

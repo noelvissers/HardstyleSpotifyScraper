@@ -30,7 +30,8 @@ This program can be configured via the appsettings.json file. It is recommended 
 
 ## Adding your own sources
 
-To add your own source, create a new .cs file in the TrackSources folder with a class that returns a TrackData list. This list should contain tracks with a title, artist, and a hash (see example).
+To add your own source, create a new .cs file in the TrackSources folder with a class that returns a TrackData list. This list should contain tracks with a title, artist, and a hash (used for filtering out duplicates) (see example).
+A 'track' in this list with the parameter `track.IsAlbum` set to `true` will be treated as an album when searching on Spotify. In this case all the tracks in the album will be added to the playlist.
 
 Example:
 ```csharp

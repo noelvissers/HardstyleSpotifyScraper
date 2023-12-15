@@ -21,32 +21,40 @@ namespace SpotifyReleaseScavenger.TrackSources
     {
       List<TrackData> trackData = new List<TrackData>();
       HtmlWeb web = new HtmlWeb();
-
-      HtmlDocument doc = web.Load(@"https://music.hardstyle.com/hardstyle-releases/albums");
-      IEnumerable<HtmlNode> nodeAlbums = doc.DocumentNode
-        .Descendants("td")
-        .Where(n => n.HasClass("text-1"));
+      string url = "https://music.hardstyle.com/hardstyle-releases/albums";
 
       var configurationBuilder = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddUserSecrets<Program>()
         .Build();
 
+      // Check albums
+      HtmlDocument doc = web.Load(url);
+      IEnumerable<HtmlNode> nodeAlbums = doc.DocumentNode
+        .Descendants("td")
+        .Where(n => n.HasClass("text-1"));
+
+      var nodeAlbum = nodeAlbums.Select(item => item.FirstChild).ToList();
+
       int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleDotComSettings:AlbumsToCheck").Value);
       int albumsChecked = 0;
-
-      foreach (var node in nodeAlbums)
+      foreach (var node in nodeAlbum)
       {
         if (albumsChecked >= albumsToCheck)
         {
           break;
         }
 
-        // TODO: Check albums
+        TrackData track = new TrackData();
 
-        // Make sure these tracks arent added twice: https://open.spotify.com/album/5i6jgMm2JAYNLSN6YgBHSF?si=yjjOyMpSStqARs-t5zX3TQ
-        // Only normal track is fine.
-        // This should be in tracks to add, but noted here
+        track.Title = node.Element("b").InnerText;
+        track.Artist = node.Element("span").InnerText;
+        track.IsAlbum = true;
+
+        track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"ALBUM{track.Artist}{track.Title}")));
+
+        Console.WriteLine($"[Hardstyle.com | Albums] [{track.Hash}] {track.Artist} - {track.Title}");
+        trackData.Add(track);
 
         albumsChecked++;
       }

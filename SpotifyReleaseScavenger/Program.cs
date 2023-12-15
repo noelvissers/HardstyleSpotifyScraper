@@ -43,9 +43,9 @@ namespace SpotifyReleaseScavenger
       List<IScavenge> hardstyleReleaseRadarSources = new()
       {
         new HardstyleDotCom_Albums(),
-        //new HardstyleDotCom_Tracks(),
-        //new ArGangDotNl_Albums(),
-        //new ArGangDotNl_Tracks()
+        new HardstyleDotCom_Tracks(),
+        new ArGangDotNl_Albums(),
+        new ArGangDotNl_Tracks()
       };
       string hardstyleReleaseRadarId = configurationBuilder.GetSection("SpotifyPlaylistId:HardstyleReleaseRadar").Value;
       PlaylistData hardstyleReleaseRadar = new(hardstyleReleaseRadarId, hardstyleReleaseRadarSources);
@@ -206,6 +206,11 @@ namespace SpotifyReleaseScavenger
                     var fullAlbum = await spotify.Albums.Get(item.Id);
                     foreach (var albumTrack in fullAlbum.Tracks.Items)
                     {
+                      if (albumTrack.Name.Contains("- Extended"))
+                      {
+                        continue;
+                      }
+
                       TrackData spotifyTrack = new TrackData();
 
                       spotifyTrack.SpotifyArtists = albumTrack.Artists;
@@ -226,6 +231,11 @@ namespace SpotifyReleaseScavenger
                 {
                   if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                   {
+                    if (albumTrack.Name.Contains("- Extended"))
+                    {
+                      continue;
+                    }
+
                     TrackData spotifyTrack = new TrackData();
 
                     spotifyTrack.SpotifyArtists = albumTrack.Artists;
@@ -352,7 +362,7 @@ namespace SpotifyReleaseScavenger
         .Build();
 
       int dateAddedThreshold = Int32.Parse(configurationBuilder.GetSection("Settings:DateAddedThreshold").Value);
-      var dateThreshold = DateTime.UtcNow.AddDays(-1 * dateAddedThreshold);
+      var dateThreshold = DateTime.UtcNow.AddDays(-1 * dateAddedThreshold).AddHours(1);
 
       try
       {

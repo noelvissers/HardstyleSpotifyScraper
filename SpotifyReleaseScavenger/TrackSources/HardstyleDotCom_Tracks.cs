@@ -47,11 +47,11 @@ namespace SpotifyReleaseScavenger.TrackSources
             nodeElement++;
             if (nodeTrackChild.Name == "b" && nodeElement % 2 == 1)
             {
-              track.Title = nodeTrackChild.InnerHtml;
+              track.Title = nodeTrackChild.InnerText;
             }
             else if (nodeTrackChild.Name == "span")
             {
-              track.Artist = nodeTrackChild.InnerHtml;
+              track.Artist = nodeTrackChild.InnerText;
             }
           }
           track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{track.Artist}{track.Title}")));

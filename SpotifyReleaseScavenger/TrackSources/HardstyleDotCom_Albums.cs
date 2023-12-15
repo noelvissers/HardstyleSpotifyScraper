@@ -21,77 +21,42 @@ namespace SpotifyReleaseScavenger.TrackSources
     {
       List<TrackData> trackData = new List<TrackData>();
       HtmlWeb web = new HtmlWeb();
-
-      HtmlDocument doc = web.Load(@"https://music.hardstyle.com/hardstyle-releases/albums");
-      IEnumerable<HtmlNode> nodeAlbums = doc.DocumentNode
-        .Descendants("td")
-        .Where(n => n.HasClass("text-1"));
+      string url = "https://music.hardstyle.com/hardstyle-releases/albums";
 
       var configurationBuilder = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddUserSecrets<Program>()
         .Build();
 
-      int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleReleaseRadarSettings:AlbumsToCheck").Value);
-      int albumsChecked = 0;
+      // Check albums
+      HtmlDocument doc = web.Load(url);
+      IEnumerable<HtmlNode> nodeAlbums = doc.DocumentNode
+        .Descendants("td")
+        .Where(n => n.HasClass("text-1"));
 
-      foreach (var node in nodeAlbums)
+      var nodeAlbum = nodeAlbums.Select(item => item.FirstChild).ToList();
+
+      int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleDotComSettings:AlbumsToCheck").Value);
+      int albumsChecked = 0;
+      foreach (var node in nodeAlbum)
       {
         if (albumsChecked >= albumsToCheck)
         {
           break;
         }
+
+        TrackData track = new TrackData();
+
+        track.Title = node.Element("b").InnerText;
+        track.Artist = node.Element("span").InnerText;
+        track.IsAlbum = true;
+
+        track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"ALBUM{track.Artist}{track.Title}")));
+
+        Console.WriteLine($"[Hardstyle.com | Albums] [{track.Hash}] {track.Artist} - {track.Title}");
+        trackData.Add(track);
+
         albumsChecked++;
-
-        string albumData = GetStringBetween(node.InnerHtml, "href=\"", "\">");
-
-        Thread.Sleep(1000);
-        HtmlDocument albumDetail = web.Load(albumData);
-
-        IEnumerable<HtmlNode> nodeAlbum = albumDetail.DocumentNode
-          .Descendants("td")
-          .Where(n => n.HasClass("text-1"));
-
-        var nodeAlbumTracks = nodeAlbum.Select(item => item.FirstChild).ToList();
-
-        long indexStart = 0;
-        foreach (var nodeAlbumTrack in nodeAlbumTracks)
-        {
-          string compare = GetStringBetween(nodeAlbumTrack.OuterHtml, "href=\"", "\"><b class");
-          int indexCompare = compare.LastIndexOf('/');
-          compare = compare.Substring(indexCompare + 1, compare.Length - indexCompare - 1);
-          long indexCurrent = long.Parse(compare);
-
-          if (indexStart == 0)
-          {
-            indexStart = indexCurrent;
-          }
-          else if (indexStart != indexCurrent)
-          {
-            continue;
-          }
-          indexStart++;
-
-          TrackData track = new TrackData();
-          int nodeElement = 0;
-
-          foreach (var nodeAlbumTrackChild in nodeAlbumTrack.ChildNodes)
-          {
-            nodeElement++;
-            if (nodeAlbumTrackChild.Name == "b" && nodeElement % 2 == 1)
-            {
-              track.Title = nodeAlbumTrackChild.InnerHtml;
-            }
-            else if (nodeAlbumTrackChild.Name == "span")
-            {
-              track.Artist = nodeAlbumTrackChild.InnerHtml;
-            }
-          }
-          track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{track.Artist}{track.Title}")));
-
-          Console.WriteLine($"[Hardstyle.com | Albums] [{track.Hash}] {track.Artist} - {track.Title}");
-          trackData.Add(track);
-        }
       }
 
       Console.WriteLine($"[Hardstyle.com | Albums] Retrieved a total of {trackData.Count()} entries.");
@@ -101,7 +66,7 @@ namespace SpotifyReleaseScavenger.TrackSources
     public string GetStringBetween(string text, string firstString, string lastString)
     {
       int pos1 = text.IndexOf(firstString) + firstString.Length;
-      int pos2 = text.IndexOf(lastString);
+      int pos2 = text.IndexOf(lastString, pos1);
 
       return text.Substring(pos1, pos2 - pos1);
     }

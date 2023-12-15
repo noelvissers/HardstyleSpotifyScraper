@@ -11,6 +11,7 @@ namespace SpotifyReleaseScavenger.Models
   {
     public string Title { get; set; }
     public string Artist { get; set; }
+    public bool IsAlbum { get; set; }
     public List<SimpleArtist> SpotifyArtists { get; set; }
     public string Hash { get; set; }
     public string Uri { get; set; }

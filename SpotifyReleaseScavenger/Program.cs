@@ -418,6 +418,9 @@ namespace SpotifyReleaseScavenger
 
     public async Task<bool> CheckArtistThreshold(List<SimpleArtist> artists)
     {
+      //Currently disabled since spotify changed to float/double, and API tries to return int, thus giving an error.
+      return true;
+
       var configurationBuilder = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddUserSecrets<Program>()
@@ -430,7 +433,7 @@ namespace SpotifyReleaseScavenger
       {
         var fullArtist = await spotify.Artists.Get(artist.Id);
         var followers = fullArtist.Followers.Total;
-        var popularity = fullArtist.Popularity;
+        int popularity = fullArtist.Popularity;
 
         if (followers >= thresholdFollowers && popularity >= thresholdPopularity)
         {

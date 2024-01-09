@@ -433,11 +433,17 @@ namespace SpotifyReleaseScavenger
       {
         var fullArtist = await spotify.Artists.Get(artist.Id);
         var followers = fullArtist.Followers.Total;
-        int popularity = fullArtist.Popularity;
+        var popularity = fullArtist.Popularity;
+        var name = fullArtist.Name;
 
         if (followers >= thresholdFollowers && popularity >= thresholdPopularity)
         {
           Console.WriteLine($"[SPOTIFY] Artist above threshold: F: {followers} [{thresholdFollowers}] P: {popularity} [{thresholdPopularity}] Artist: {fullArtist.Name}");
+          return true;
+        }
+        else if (name.Equals("Various Artists"))
+        {
+          Console.WriteLine($"[SPOTIFY] Compilation album. Ignoring artist thresholds.");
           return true;
         }
         Console.WriteLine($"[SPOTIFY] Artist below threshold: F: {followers} [{thresholdFollowers}] P: {popularity} [{thresholdPopularity}] Artist: {fullArtist.Name}");

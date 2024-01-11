@@ -212,8 +212,10 @@ namespace SpotifyReleaseScavenger
                       }
 
                       TrackData spotifyTrack = new TrackData();
+                      var fullAlbumTrack = await spotify.Tracks.Get(albumTrack.Id);
 
                       spotifyTrack.SpotifyArtists = albumTrack.Artists;
+                      spotifyTrack.SpotifyExternalId = fullAlbumTrack.ExternalIds;
                       spotifyTrack.Title = albumTrack.Name;
                       spotifyTrack.Uri = albumTrack.Uri;
                       spotifyTrack.ReleaseDate = releaseDate;
@@ -237,8 +239,10 @@ namespace SpotifyReleaseScavenger
                     }
 
                     TrackData spotifyTrack = new TrackData();
+                    var fullAlbumTrack = await spotify.Tracks.Get(albumTrack.Id);
 
                     spotifyTrack.SpotifyArtists = albumTrack.Artists;
+                    spotifyTrack.SpotifyExternalId = fullAlbumTrack.ExternalIds;
                     spotifyTrack.Title = albumTrack.Name;
                     spotifyTrack.Uri = albumTrack.Uri;
                     DateTime.TryParse(item.ReleaseDate, out DateTime releaseDate);
@@ -278,6 +282,7 @@ namespace SpotifyReleaseScavenger
                     if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                     {
                       spotifyTrack.SpotifyArtists = item.Artists;
+                      spotifyTrack.SpotifyExternalId = item.ExternalIds;
                       spotifyTrack.Uri = item.Uri;
                       spotifyTrack.ReleaseDate = releaseDate;
                       spotifyTrackList.Add(spotifyTrack);
@@ -295,6 +300,7 @@ namespace SpotifyReleaseScavenger
                   if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                   {
                     spotifyTrack.SpotifyArtists = item.Artists;
+                    spotifyTrack.SpotifyExternalId = item.ExternalIds;
                     spotifyTrack.Uri = item.Uri;
                     DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
                     spotifyTrack.ReleaseDate = releaseDate;
@@ -332,17 +338,25 @@ namespace SpotifyReleaseScavenger
 
         foreach (var track in trackList)
         {
-          if (track.Uri != null && (!playlistTracks.Items.Any(item => (item.Track as FullTrack)?.Uri == track.Uri)))
+          if (track.SpotifyExternalId != null)
           {
-            //Add track to playlist
-            await spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(new List<string> { track.Uri }));
-            Console.WriteLine($"[SPOTIFY] Added track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' to playlist [{playlistId}]");
+            if (playlistTracks.Items.Any(item => (item.Track as FullTrack)?.ExternalIds.First().Value == track.SpotifyExternalId.First().Value))
+            {
+              //Track is already in playlist
+              Console.WriteLine($"[SPOTIFY] Track '[{track.SpotifyExternalId.First().Value}] {track.SpotifyArtists.First().Name} - {track.Title}' already in playlist [{playlistId}]");
+              continue;
+            }
           }
-          else
+          else if (track.Uri != null && (playlistTracks.Items.Any(item => (item.Track as FullTrack)?.Uri == track.Uri)))
           {
             //Track is already in playlist
             Console.WriteLine($"[SPOTIFY] Track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' already in playlist [{playlistId}]");
+            continue;
           }
+
+          //Add track to playlist
+          await spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(new List<string> { track.Uri }));
+          Console.WriteLine($"[SPOTIFY] Added track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' to playlist [{playlistId}]");
 
           //Needed for better order in playlist
           Thread.Sleep(1000);

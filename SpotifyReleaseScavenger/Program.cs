@@ -345,7 +345,7 @@ namespace SpotifyReleaseScavenger
           }
 
           //Needed for better order in playlist
-          Thread.Sleep(500);
+          Thread.Sleep(1000);
         }
       }
       catch (Exception ex)

@@ -9,7 +9,9 @@ using System.Linq;
 using System.Reflection.Metadata;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml;
 
 namespace SpotifyReleaseScavenger.TrackSources
@@ -30,30 +32,24 @@ namespace SpotifyReleaseScavenger.TrackSources
 
       for (int i = 1; i <= trackPagesToCheck; i++)
       {
-        HtmlDocument doc = web.Load(@"https://music.hardstyle.com/hardstyle-releases/tracks/page/" + i.ToString());
-        IEnumerable<HtmlNode> nodeTrackTracks = doc.DocumentNode
-          .Descendants("td")
-          .Where(n => n.HasClass("text-1"));
+        HtmlDocument doc = web.Load(@"https://hardstyle.com/en/tracks?page=" + i.ToString() + "&genre=Hardcore~Hardstyle~Uptempo");
+        IEnumerable<HtmlNode> nodeTracks = doc.DocumentNode
+          .Descendants("div")
+          .Where(n => n.HasClass("trackContent"));
 
-        var nodeTracks = nodeTrackTracks.Select(item => item.FirstChild).ToList();
-
-        foreach (var nodeTrack in nodeTracks)
+        foreach (var node in nodeTracks)
         {
           TrackData track = new TrackData();
-          int nodeElement = 0;
 
-          foreach (var nodeTrackChild in nodeTrack.ChildNodes)
+          track.Title = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(0).InnerText), @"\s+", " ").Replace("\n", "").Trim();
+
+          if (node.ChildNodes.ElementAt(1).InnerText.ToLower().Contains("remix"))
           {
-            nodeElement++;
-            if (nodeTrackChild.Name == "b" && nodeElement % 2 == 1)
-            {
-              track.Title = nodeTrackChild.InnerText;
-            }
-            else if (nodeTrackChild.Name == "span")
-            {
-              track.Artist = nodeTrackChild.InnerText;
-            }
+            track.Title += $" {Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(1).InnerText), @"\s+", " ").Replace("\n", "").Trim()}";
           }
+
+          track.Artist = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(2).InnerText), @"\s+", " ").Replace("\n", "").Trim();
+
           track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"{track.Artist}{track.Title}")));
 
           Console.WriteLine($"[Hardstyle.com | Tracks] [{track.Hash}] {track.Artist} - {track.Title}");

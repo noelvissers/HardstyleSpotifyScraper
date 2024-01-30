@@ -423,7 +423,7 @@ namespace SpotifyReleaseScavenger
     public List<string> GetArtistList(string artists)
     {
       //List of strings to split by
-      String[] delimiters = { " & ", " and ", " featuring ", " features ", ",", " ft. " };
+      String[] delimiters = { " & ", " and ", " featuring ", " features ", ",", " ft. ", " Ft. ", " feat. ", " Feat. ", " - " };
 
       List<string> artistList = artists.Split(delimiters, StringSplitOptions.None).ToList();
 

@@ -9,7 +9,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Web;
 using System.Xml;
 using System.Xml.Linq;
 
@@ -21,7 +23,7 @@ namespace SpotifyReleaseScavenger.TrackSources
     {
       List<TrackData> trackData = new List<TrackData>();
       HtmlWeb web = new HtmlWeb();
-      string url = "https://music.hardstyle.com/hardstyle-releases/albums";
+      string url = "https://hardstyle.com/en/albums?genre=Hardcore%7EHardstyle%7EUptempo";
 
       var configurationBuilder = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
@@ -31,14 +33,12 @@ namespace SpotifyReleaseScavenger.TrackSources
       // Check albums
       HtmlDocument doc = web.Load(url);
       IEnumerable<HtmlNode> nodeAlbums = doc.DocumentNode
-        .Descendants("td")
-        .Where(n => n.HasClass("text-1"));
-
-      var nodeAlbum = nodeAlbums.Select(item => item.FirstChild).ToList();
+        .Descendants("div")
+        .Where(n => n.HasClass("trackContent"));
 
       int albumsToCheck = Int32.Parse(configurationBuilder.GetSection("HardstyleDotComSettings:AlbumsToCheck").Value);
       int albumsChecked = 0;
-      foreach (var node in nodeAlbum)
+      foreach (var node in nodeAlbums)
       {
         if (albumsChecked >= albumsToCheck)
         {
@@ -47,8 +47,8 @@ namespace SpotifyReleaseScavenger.TrackSources
 
         TrackData track = new TrackData();
 
-        track.Title = node.Element("b").InnerText;
-        track.Artist = node.Element("span").InnerText;
+        track.Title = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(0).InnerText), @"\s+", " ").Replace("\n", "").Trim();
+        track.Artist = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(2).InnerText), @"\s+", " ").Replace("\n", "").Trim();
         track.IsAlbum = true;
 
         track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"ALBUM{track.Artist}{track.Title}")));

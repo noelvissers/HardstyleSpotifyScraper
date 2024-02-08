@@ -23,8 +23,13 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="HtmlAgilityPack" Version="1.11.54" />
-    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="6.0.1" />
-    <PackageReference Include="SpotifyAPI.Web" Version="7.0.2" />
+    <PackageReference Include="HtmlAgilityPack" Version="1.11.58" />
+    <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.0" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="SpotifyAPI.Web">
+      <HintPath>SpotifyAPI\SpotifyAPI.Web.dll</HintPath>
+    </Reference>
   </ItemGroup>
 </Project>

@@ -45,11 +45,12 @@ namespace SpotifyReleaseScavenger.TrackSources
           break;
         }
 
-        TrackData track = new TrackData();
-
-        track.Title = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(0).InnerText), @"\s+", " ").Replace("\n", "").Trim();
-        track.Artist = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(2).InnerText), @"\s+", " ").Replace("\n", "").Trim();
-        track.IsAlbum = true;
+        TrackData track = new TrackData
+        {
+          Title = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(0).InnerText), @"\s+", " ").Replace("\n", "").Trim(),
+          Artist = Regex.Replace(HttpUtility.HtmlDecode(node.ChildNodes.ElementAt(2).InnerText), @"\s+", " ").Replace("\n", "").Trim(),
+          IsAlbum = true
+        };
 
         track.Hash = Convert.ToBase64String(SHA256.HashData(Encoding.UTF8.GetBytes($"ALBUM{track.Artist}{track.Title}")));
 

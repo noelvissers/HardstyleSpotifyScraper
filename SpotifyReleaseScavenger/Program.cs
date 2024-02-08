@@ -356,6 +356,8 @@ namespace SpotifyReleaseScavenger
 
           //Add track to playlist
           await spotify.Playlists.AddItems(playlistId, new PlaylistAddItemsRequest(new List<string> { track.Uri }));
+          playlistTracks = await spotify.Playlists.GetItems(playlistId);
+
           Console.WriteLine($"[SPOTIFY] Added track '[{track.Uri}] {track.SpotifyArtists.First().Name} - {track.Title}' to playlist [{playlistId}]");
 
           //Needed for better order in playlist
@@ -432,9 +434,6 @@ namespace SpotifyReleaseScavenger
 
     public async Task<bool> CheckArtistThreshold(List<SimpleArtist> artists)
     {
-      //Currently disabled since spotify changed to float/double, and API tries to return int, thus giving an error.
-      return true;
-
       var configurationBuilder = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .AddUserSecrets<Program>()

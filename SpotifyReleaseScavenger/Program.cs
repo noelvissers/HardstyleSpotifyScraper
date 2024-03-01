@@ -167,30 +167,47 @@ namespace SpotifyReleaseScavenger
     {
       List<TrackData> spotifyTrackList = new();
 
+      var configurationBuilder = new ConfigurationBuilder()
+        .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+        .AddUserSecrets<Program>()
+        .Build();
+
+      bool chechForReleaseDate = Convert.ToBoolean(configurationBuilder.GetSection("Settings:ChechForReleaseDate").Value);
+      bool checkArtistThreshold = Convert.ToBoolean(configurationBuilder.GetSection("Settings:CheckArtistThreshold").Value);
+
       foreach (var track in trackList)
       {
-        var configurationBuilder = new ConfigurationBuilder()
-          .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
-          .AddUserSecrets<Program>()
-          .Build();
-
-        bool chechForReleaseDate = Convert.ToBoolean(configurationBuilder.GetSection("Settings:ChechForReleaseDate").Value);
-        DateTime currentDate = GetCurrentTimeWet();
-
-        bool checkArtistThreshold = Convert.ToBoolean(configurationBuilder.GetSection("Settings:CheckArtistThreshold").Value);
-
         List<string> artists = GetArtistList(track.Artist);
         var searchQuery = $"{track.Title} {artists.First()}";
         SearchRequest searchRequest;
 
-        Thread.Sleep(100);
+        Console.WriteLine($"[SPOTIFY] Searching for: {artists.First()} - {track.Title}");
+
         if (track.IsAlbum)
         {
-          searchRequest = new SearchRequest(SearchRequest.Types.Album, searchQuery);
           try
           {
+            searchRequest = new SearchRequest(SearchRequest.Types.Album, searchQuery);
+
             // Get album tracks
-            var searchResult = await spotify.Search.Item(searchRequest);
+            int count = 0;
+            int nMaxRetries = 10;
+            SearchResponse searchResult;
+            while (true)
+            {
+              try
+              {
+                searchResult = await spotify.Search.Item(searchRequest);
+                break;
+              }
+              catch (Exception ex)
+              {
+                if (++count == nMaxRetries)
+                {
+                  Console.WriteLine($"Error: {ex.Message}");
+                }
+              }
+            }
 
             if (searchResult.Albums.Items != null)
             {
@@ -198,7 +215,7 @@ namespace SpotifyReleaseScavenger
               if (chechForReleaseDate)
               {
                 DateTime.TryParse(item.ReleaseDate, out DateTime releaseDate);
-                if (currentDate.Year == releaseDate.Year && currentDate.Month == releaseDate.Month && currentDate.Day == releaseDate.Day)
+                if (await CheckReleaseDate(releaseDate))
                 {
                   if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                   {
@@ -261,11 +278,29 @@ namespace SpotifyReleaseScavenger
         }
         else
         {
-          searchRequest = new SearchRequest(SearchRequest.Types.Track, searchQuery);
           try
           {
+            searchRequest = new SearchRequest(SearchRequest.Types.Track, searchQuery);
+
             // Get track
-            var searchResult = await spotify.Search.Item(searchRequest);
+            int count = 0;
+            int nMaxRetries = 10;
+            SearchResponse searchResult;
+            while (true)
+            {
+              try
+              {
+                searchResult = await spotify.Search.Item(searchRequest);
+                break;
+              }
+              catch (Exception ex)
+              {
+                if (++count == nMaxRetries)
+                {
+                  Console.WriteLine($"Error: {ex.Message}");
+                }
+              }
+            }
 
             if (searchResult.Tracks.Items != null)
             {
@@ -277,7 +312,7 @@ namespace SpotifyReleaseScavenger
                 {
                   // Add first track with todays release date
                   DateTime.TryParse(item.Album.ReleaseDate, out DateTime releaseDate);
-                  if (currentDate.Year == releaseDate.Year && currentDate.Month == releaseDate.Month && currentDate.Day == releaseDate.Day)
+                  if (await CheckReleaseDate(releaseDate))
                   {
                     if (!checkArtistThreshold || (checkArtistThreshold && await CheckArtistThreshold(item.Artists)))
                     {
@@ -461,6 +496,23 @@ namespace SpotifyReleaseScavenger
         }
         Console.WriteLine($"[SPOTIFY] Artist below threshold: F: {followers} [{thresholdFollowers}] P: {popularity} [{thresholdPopularity}] Artist: {fullArtist.Name}");
       }
+      return false;
+    }
+
+    public async Task<bool> CheckReleaseDate(DateTime releaseDate)
+    {
+      DateTime currentDate = GetCurrentTimeWet();
+      DateTime yesterdaysDate = currentDate.AddDays(-1);
+
+      if(currentDate.Year == releaseDate.Year && currentDate.Month == releaseDate.Month && currentDate.Day == releaseDate.Day)
+      {
+        return true;
+      } else if (yesterdaysDate.Year == releaseDate.Year && yesterdaysDate.Month == releaseDate.Month && yesterdaysDate.Day == releaseDate.Day)
+      {
+        Console.WriteLine("[App] Warning: Track was released yesterday.");
+        return true;
+      }
+
       return false;
     }
 
